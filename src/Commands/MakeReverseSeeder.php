@@ -37,7 +37,7 @@ class MakeReverseSeeder extends Command
      */
     public function handle()
     {
-        $seedsPath = 'seeds/';
+        $seedsPath = 'seeders/';
 
         $tableName = lcfirst($this->argument('table_name'));
         $seederName = Str::studly($tableName) . 'TableSeeder';
