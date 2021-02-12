@@ -1,4 +1,5 @@
 <?php
+
 namespace GGuney\RSeeder\Commands;
 
 use Illuminate\Console\Command;
@@ -45,7 +46,7 @@ class MakeReverseSeeder extends Command
 
         $columns = $this->setColumns($tableName);
         $rows = $this->getRows($tableName);
-        $string = $this->rowsToString($rows, $columns);
+        $string = $this->rowsToString($tableName, $rows, $columns);
         $txt = $this->replaceStub($seederName, $seederVariableName, $tableName, $string);
         $this->saveFile($seedsPath, $seederName, $txt);
     }
@@ -59,8 +60,8 @@ class MakeReverseSeeder extends Command
     private function getColumns($tableName)
     {
         return \DB::connection()
-                  ->getSchemaBuilder()
-                  ->getColumnListing($tableName);
+            ->getSchemaBuilder()
+            ->getColumnListing($tableName);
     }
 
     /**
@@ -99,12 +100,12 @@ class MakeReverseSeeder extends Command
         $fromDate = $this->option('from');
         if (isset($fromDate) && isset($fromColumn)) {
             $rows = \DB::table($tableName)
-                       ->where($fromColumn, '>', $fromDate)
-                       ->get();
+                ->where($fromColumn, '>', $fromDate)
+                ->get();
             return $rows;
         } else {
             $rows = \DB::table($tableName)
-                       ->get();
+                ->get();
             return $rows;
         }
     }
@@ -112,33 +113,56 @@ class MakeReverseSeeder extends Command
     /**
      * DB Rows to array string.
      *
+     * @param string $tableName
      * @param array $rows
      * @param array $columns
      * @return string
      */
-    private function rowsToString($rows, $columns)
+    private function rowsToString($tableName, $rows, $columns)
     {
         $string = "";
-        foreach ($rows as $key => $row) {
+        foreach ($rows as $row) {
             $string .= "\n\t\t\t[";
             foreach ($columns as $column) {
-                if (filter_var($row->$column, FILTER_VALIDATE_INT) || filter_var($row->$column, FILTER_VALIDATE_FLOAT)) {
-                    $value = $row->$column;
-                } else if (!isset($row->$column)) {
+                //@todo improve this
+                $type = \DB::getSchemaBuilder()->getColumnType($tableName, $column);
+                if ($this->isNumeric($type)) {
+                    $value = str_replace(",", ".", $row->$column);
+                } elseif (!isset($row->$column)) {
                     $value = 'NULL';
                 } else {
-                    $value = "'" . str_replace("'","\'",$row->$column) . "'";
+                    $value = "'" . str_replace("'", "\'", $row->$column) . "'";
                 }
                 $string .= "'$column' => " . $value . ", ";
             }
-            $string = rtrim($string,', ');
+            $string = rtrim($string, ', ');
             $string .= "],";
         }
 
         return $string;
-
     }
 
+    /**
+     * Check column if is numeric
+     *
+     * @see https://www.doctrine-project.org/projects/doctrine-dbal/en/latest/reference/types.html#detection-of-database-types
+     * @param string $type
+     * @return boolean
+     */
+    private function isNumeric(string $type)
+    {
+        $numericDataType = [
+            'smallint',
+            'integer',
+            'bigint',
+            'decimal',
+            'float'
+        ];
+        if (in_array($type, $numericDataType)) {
+            return true;
+        }
+        return false;
+    }
 
     /**
      * Get stub.
@@ -185,5 +209,4 @@ class MakeReverseSeeder extends Command
         fclose($file);
         $this->info($seederName . ' named seeder created in seeds folder.');
     }
-
 }
