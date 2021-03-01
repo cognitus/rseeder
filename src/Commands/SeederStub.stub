@@ -14,6 +14,7 @@ class {SEEDER_NAME} extends Seeder
      */
     public function run()
     {
+        DB::table('{TABLE_NAME}')->truncate();
         ${SEEDER_VARIABLE_NAME} = [{ARRAY}
         ];
         DB::table('{TABLE_NAME}')->insert(${SEEDER_VARIABLE_NAME});
